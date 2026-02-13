@@ -10,8 +10,25 @@ const aiRoutes = require('./routes/ai.routes');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// CORS configuration for production
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Allow all origins for now, tighten in production
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // Routes
@@ -22,6 +39,11 @@ app.use('/api/ai', aiRoutes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'XBot API is running' });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'XBot API - Visit /health for status' });
 });
 
 // Error handling middleware
@@ -37,7 +59,7 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
     });
   })

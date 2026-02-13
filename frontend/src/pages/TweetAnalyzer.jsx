@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Sparkles,
   Lightbulb,
@@ -6,15 +7,34 @@ import {
   List,
   RefreshCw,
   Loader2,
+  Clipboard,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { aiAPI } from '../services/api';
 
 export default function TweetAnalyzer() {
+  const location = useLocation();
   const [tweetText, setTweetText] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('analyze');
   const [results, setResults] = useState(null);
+
+  // Load tweet text from navigation state
+  useEffect(() => {
+    if (location.state?.tweetText) {
+      setTweetText(location.state.tweetText);
+    }
+  }, [location.state]);
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setTweetText(text);
+      toast.success('Pasted from clipboard!');
+    } catch (error) {
+      toast.error('Could not paste from clipboard');
+    }
+  };
 
   const tabs = [
     { id: 'analyze', label: 'Analyze', icon: Sparkles },
@@ -243,13 +263,22 @@ export default function TweetAnalyzer() {
 
       {/* Input Area */}
       <div className="card">
-        <textarea
-          value={tweetText}
-          onChange={(e) => setTweetText(e.target.value)}
-          className="input-field min-h-[120px] resize-none"
-          placeholder="Paste a tweet here to analyze..."
-          maxLength={500}
-        />
+        <div className="relative">
+          <textarea
+            value={tweetText}
+            onChange={(e) => setTweetText(e.target.value)}
+            className="input-field min-h-[120px] resize-none pr-12"
+            placeholder="Paste a tweet here to analyze...&#10;&#10;Example: Just launched my new product! 🚀 After 6 months of hard work, it's finally live."
+            maxLength={500}
+          />
+          <button
+            onClick={handlePaste}
+            className="absolute top-3 right-3 p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            title="Paste from clipboard"
+          >
+            <Clipboard className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
         <div className="flex justify-between items-center mt-3">
           <span className="text-sm text-gray-500">
             {tweetText.length}/500 characters

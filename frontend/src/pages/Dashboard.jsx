@@ -1,144 +1,115 @@
 import { useState, useEffect } from 'react';
-import { Search, TrendingUp, Sparkles, History } from 'lucide-react';
+import { Sparkles, History, Clipboard, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { tweetAPI, authAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { tweetAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import TweetCard from '../components/TweetCard';
 
 export default function Dashboard() {
-  const [username, setUsername] = useState('');
-  const [tweets, setTweets] = useState([]);
+  const [tweetText, setTweetText] = useState('');
   const [savedAnalyses, setSavedAnalyses] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [twitterUsername, setTwitterUsername] = useState('');
-  const { user, updateUser } = useAuthStore();
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadSavedAnalyses();
-    if (user?.twitterUsername) {
-      setTwitterUsername(user.twitterUsername);
-    }
-  }, [user]);
+  }, []);
 
   const loadSavedAnalyses = async () => {
     try {
       const { data } = await tweetAPI.getSavedAnalyses();
-      setSavedAnalyses(data.analyses);
+      setSavedAnalyses(data.analyses || []);
     } catch (error) {
       console.error('Error loading analyses:', error);
     }
   };
 
-  const handleFetchTweets = async (e) => {
-    e.preventDefault();
-    if (!username.trim()) {
-      toast.error('Please enter a Twitter username');
-      return;
-    }
-
-    setLoading(true);
+  const handlePaste = async () => {
     try {
-      const { data } = await tweetAPI.getTweetsByUsername(username, 10);
-      setTweets(data.tweets.tweets || []);
-      toast.success(`Found ${data.tweets.tweets?.length || 0} tweets`);
+      const text = await navigator.clipboard.readText();
+      setTweetText(text);
+      toast.success('Pasted from clipboard!');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Error fetching tweets');
-    } finally {
-      setLoading(false);
+      toast.error('Could not paste from clipboard');
     }
   };
 
-  const handleSaveTwitterUsername = async () => {
-    if (!twitterUsername.trim()) {
-      toast.error('Please enter your Twitter username');
+  const handleAnalyze = () => {
+    if (!tweetText.trim()) {
+      toast.error('Please enter a tweet to analyze');
       return;
     }
-
-    try {
-      const { data } = await authAPI.updateTwitterUsername(twitterUsername);
-      updateUser(data.user);
-      toast.success('Twitter username saved!');
-    } catch (error) {
-      toast.error('Error saving Twitter username');
-    }
+    navigate('/analyzer', { state: { tweetText } });
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-gray-400">
-            Search for tweets and leverage them with AI
-          </p>
-        </div>
-      </div>
-
-      {/* Set Your Twitter Username */}
-      <div className="card">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-x-blue" />
-          Your Twitter Username
-        </h2>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={twitterUsername}
-            onChange={(e) => setTwitterUsername(e.target.value)}
-            className="input-field flex-1"
-            placeholder="@yourusername (without @)"
-          />
-          <button
-            onClick={handleSaveTwitterUsername}
-            className="btn-primary whitespace-nowrap"
-          >
-            Save
-          </button>
-        </div>
-        <p className="text-sm text-gray-500 mt-2">
-          Set your username to easily fetch your own tweets
+      <div>
+        <h1 className="text-2xl font-bold">Welcome, {user?.username}! 👋</h1>
+        <p className="text-gray-400">
+          Paste any tweet and let AI help you leverage it
         </p>
       </div>
 
-      {/* Search Tweets */}
+      {/* Quick Analyze */}
       <div className="card">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Search className="w-5 h-5 text-x-blue" />
-          Fetch Tweets by Username
+          <Sparkles className="w-5 h-5 text-x-blue" />
+          Quick Tweet Analysis
         </h2>
-        <form onSubmit={handleFetchTweets} className="flex gap-3">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="input-field flex-1"
-            placeholder="Enter Twitter username"
-          />
-          <button
-            type="submit"
-            className="btn-primary whitespace-nowrap"
-            disabled={loading}
-          >
-            {loading ? 'Fetching...' : 'Fetch Tweets'}
-          </button>
-        </form>
-      </div>
-
-      {/* Tweets List */}
-      {tweets.length > 0 && (
-        <div className="card">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-x-blue" />
-            Tweets Found ({tweets.length})
-          </h2>
-          <div className="space-y-4">
-            {tweets.map((tweet) => (
-              <TweetCard key={tweet.id} tweet={tweet} />
-            ))}
+        <div className="space-y-4">
+          <div className="relative">
+            <textarea
+              value={tweetText}
+              onChange={(e) => setTweetText(e.target.value)}
+              className="input-field min-h-[120px] resize-none pr-12"
+              placeholder="Paste a tweet here...&#10;&#10;Example: Just launched my new product! 🚀 After 6 months of hard work, it's finally live. Check it out!"
+              maxLength={500}
+            />
+            <button
+              onClick={handlePaste}
+              className="absolute top-3 right-3 p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              title="Paste from clipboard"
+            >
+              <Clipboard className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-500">
+              {tweetText.length}/500 characters
+            </span>
+            <button
+              onClick={handleAnalyze}
+              className="btn-primary flex items-center gap-2"
+              disabled={!tweetText.trim()}
+            >
+              Analyze with AI
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Features */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card text-center">
+          <div className="text-3xl mb-2">🎯</div>
+          <h3 className="font-semibold">Sentiment Analysis</h3>
+          <p className="text-sm text-gray-400">Understand the tone and emotion</p>
+        </div>
+        <div className="card text-center">
+          <div className="text-3xl mb-2">💡</div>
+          <h3 className="font-semibold">Leverage Ideas</h3>
+          <p className="text-sm text-gray-400">Get actionable content ideas</p>
+        </div>
+        <div className="card text-center">
+          <div className="text-3xl mb-2">🧵</div>
+          <h3 className="font-semibold">Thread Expansion</h3>
+          <p className="text-sm text-gray-400">Turn tweets into viral threads</p>
+        </div>
+      </div>
 
       {/* Recent Analyses */}
       {savedAnalyses.length > 0 && (
@@ -151,10 +122,12 @@ export default function Dashboard() {
             {savedAnalyses.slice(0, 5).map((analysis) => (
               <div
                 key={analysis._id}
-                className="bg-x-dark p-4 rounded-lg border border-gray-800"
+                className="bg-x-dark p-4 rounded-lg border border-gray-800 hover:border-gray-700 cursor-pointer transition-colors"
+                onClick={() => navigate('/analyzer', { state: { tweetText: analysis.tweetText } })}
               >
                 <p className="text-sm text-gray-300 mb-2">
-                  {analysis.tweetText.substring(0, 100)}...
+                  {analysis.tweetText?.substring(0, 100)}
+                  {analysis.tweetText?.length > 100 ? '...' : ''}
                 </p>
                 <div className="flex gap-2">
                   <span
