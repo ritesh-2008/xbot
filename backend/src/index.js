@@ -12,13 +12,11 @@ const app = express();
 
 // CORS configuration for production
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
-  origin: true,
+  origin: allowedOrigins,
   credentials: true,
 }));
 
