@@ -10,7 +10,7 @@ const aiRoutes = require('./routes/ai.routes');
 
 const app = express();
 
-
+console.log("FRONTEND_URL =", process.env.FRONTEND_URL);
 const corsOptions = {
   origin: process.env.FRONTEND_URL,
   credentials: true,
